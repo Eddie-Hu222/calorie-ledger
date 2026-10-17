@@ -335,7 +335,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--in
         <li><b>平台期是正常的。</b>体重下降后消耗也会降。每掉 3–4 kg，更新一次「当前体重」，目标会自动下调。</li>
       </ol>
     </div>
-    <div class="small muted" style="text-align:center">热量账本 v3 · 公式：Mifflin-St Jeor / Katch-McArdle，运动 MET 来自 Compendium of Physical Activities</div>
+    <div class="small muted" style="text-align:center">热量账本 v3.1 · 公式：Mifflin-St Jeor / Katch-McArdle，运动 MET 来自 Compendium of Physical Activities</div>
   </section>
 </main>
 
@@ -532,7 +532,8 @@ function realTdee(){
   const den=pts.reduce((s,p)=>s+(p[0]-mx)**2,0);if(!den)return {need:{w:1,k:0}};
   const slope=pts.reduce((s,p)=>s+(p[0]-mx)*(p[1]-my),0)/den;
   const avg=kc.reduce((a,b)=>a+b,0)/kc.length;
-  return {tdee:avg-slope*7700,slopeWeek:slope*7,avg};
+  const tdee=avg-slope*7700,lo=S.profile.saved?calc(S.date).bmr*0.9:1000;
+  return {tdee,slopeWeek:slope*7,avg,odd:tdee<lo||tdee>5000};
 }
 
 // ===== 食物搜索 =====
@@ -620,7 +621,7 @@ function renderHome(c,d){
   if(c.eaten>0&&c.mac[0]<c.pT*0.6&&rem<c.target*0.3)warns.push("额度快用完了，蛋白质还差不少。剩下的优先选鸡胸、蛋、虾、豆腐、希腊酸奶。");
   $("warns").innerHTML=warns.map(t=>"<div>"+esc(t)+"</div>").join("");
   const rt=realTdee();
-  $("adaptNote").textContent=rt.tdee?"按你近 4 周的真实数据，实际每天消耗约 "+r0(rt.tdee)+" kcal。和上面差得多的话，以实测为准。":"公式有 ±10% 误差。记录满 2 周后，「趋势」页会用你的真实数据校准。";
+  $("adaptNote").textContent=rt.tdee&&!rt.odd?"按你近 4 周的真实数据，实际每天消耗约 "+r0(rt.tdee)+" kcal。和上面差得多的话，以实测为准。":"公式有 ±10% 误差。记录满 2 周后，「趋势」页会用你的真实数据校准。";
 }
 function renderFood(c,d){
   document.querySelectorAll("#mealSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.meal===S.meal)));
@@ -661,7 +662,7 @@ function renderTrend(){
   $("wTrend").textContent=cur?cur.toFixed(1):"–";
   const rt=realTdee();
   let rate=null;
-  if(rt.tdee)rate=rt.slopeWeek;
+  if(rt.slopeWeek!=null)rate=rt.slopeWeek;
   else if(ws.length>=7){const a=ser.indexOf(ws[0]),b=ser.indexOf(ws[ws.length-1]);rate=(ws[ws.length-1].t-ws[0].t)/((b-a)||1)*7}
   $("wRate").textContent=rate==null?"–":(rate>=0?"+":"")+rate.toFixed(2);
   const gw=S.profile.gw;
@@ -672,7 +673,8 @@ function renderTrend(){
   else{$("wEta").textContent="–";$("wEtaL").textContent="到目标体重（在「我的」填）"}
   drawWeight(ser);drawKcal();
   const rb=$("realBox");
-  if(rt.tdee){rb.innerHTML='近 4 周平均每天吃 <b class="num">'+r0(rt.avg)+'</b> kcal，均重每周变化 <b class="num">'+(rt.slopeWeek>=0?"+":"")+rt.slopeWeek.toFixed(2)+'</b> kg，反推你每天实际消耗约 <b class="num">'+r0(rt.tdee)+'</b> kcal。'+(S.profile.saved?'公式估算的今日消耗是 <span class="num">'+r0(calc(S.date).tdee)+'</span> kcal。差距超过 200 的话，按实测值调整你吃的量。':"")}
+  if(rt.odd){rb.innerHTML='<span class="muted">近 4 周平均每天吃 <b class="num">'+r0(rt.avg)+'</b> kcal，但均重每周变化 <b class="num">'+(rt.slopeWeek>=0?"+":"")+rt.slopeWeek.toFixed(2)+'</b> kg，两者对不上，反推出的消耗（'+r0(rt.tdee)+' kcal）不可信。常见原因：有几天饮食漏记或只记了一部分，或者称重时间、穿着不一致。补全记录后会自动重新计算。</span>'}
+  else if(rt.tdee){rb.innerHTML='近 4 周平均每天吃 <b class="num">'+r0(rt.avg)+'</b> kcal，均重每周变化 <b class="num">'+(rt.slopeWeek>=0?"+":"")+rt.slopeWeek.toFixed(2)+'</b> kg，反推你每天实际消耗约 <b class="num">'+r0(rt.tdee)+'</b> kcal。'+(S.profile.saved?'公式估算的今日消耗是 <span class="num">'+r0(calc(S.date).tdee)+'</span> kcal。差距超过 200 的话，按实测值调整你吃的量。':"")}
   else{const parts=[];if(rt.need.k)parts.push("饮食再记 "+rt.need.k+" 天");if(rt.need.w)parts.push("体重再称 "+rt.need.w+" 次");
     rb.innerHTML='<span class="muted">用你自己的数据反推真实消耗，比任何公式都准。还差：'+parts.join("，")+'（近 4 周内）。</span>'}
 }

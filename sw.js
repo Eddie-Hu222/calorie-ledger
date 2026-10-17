@@ -1,5 +1,5 @@
 // 离线缓存：先用缓存秒开，同时后台拉新版本，下次打开生效
-const CACHE = "calorie-ledger-v2";
+const CACHE = "calorie-ledger-v3";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
